@@ -35,6 +35,20 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
             }
     }
 
+    private async _findAll(): Promise<School[] | AppError> {
+        const schema = await SchoolSchema.find({});
+
+        const schoolArr = schema.map(v => {
+            const obj = v.toObject();
+
+            const school = School.fromJSON(obj);
+
+            return school;
+        });
+
+        return schoolArr;
+    }
+
     async streamOne(schoolUid: string, app: Socket): Promise<void> {
 
         logger.info('data');
@@ -46,78 +60,63 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
         Fold.execute<School>(result, res => {
             app.emit('res-data', {errors: [], result: res.toJSON()});
         }, err => {
-            app.emit('res-data', {errors: [err.toJSON()]});
+            app.emit('res-err', {errors: [err.toJSON()]});
         });
 
         changeStream.on('change', async doc => {
             logger.info(doc);
 
-            const schema = await SchoolSchema.findOne({ uid: schoolUid });
+            const res = await this._findOne(schoolUid);
 
-            if (schema != null || schema != undefined) {
-                const res = schema.toObject();
-
-                const school = School.fromJSON(res);
-
-                if (school.confirmed) {
-                    app.emit('res-data', school.toJSON());
-                } else {
-                    app.emit(
-                        'res-data',
-                        new AppError({ 
-                            code: 'SchoolDidNotConfirmed',
-                            message: 'That school doesnt confirmed by admininstration yet.'
-                        }).toJSON()
-                    );
-                }
-            }
-            else {
-                app.emit(
-                    'res-data',
-                    {
-                        errors: [
-                            new AppError({
-                                code: 'SchoolDoesntExist',
-                                message: 'This school doesn\'t exist.'
-                            }).toJSON(),
-                        ],
-                    }
-                );
-            }
+            Fold.execute<School>(res, r => {
+                app.emit('res-data', {errors: [], result: r.toJSON()});
+            }, err => {
+                app.emit('res-err', {errors: [err.toJSON()]});
+            });   
         });
     }
 
     async streamAll(app: Socket): Promise<void> {
-        try {
-            SchoolSchema
-                .find({})
-                .then(arr => {
-                    const schoolArr = arr.map(v => { 
-                        const newV = v.toObject();
+        const changeStream = SchoolSchema.watch();
 
-                        const school = School.fromJSON(newV);
+        const result = await this._findAll();
 
-                        const json = school.toJSON();
+        Fold.execute<School[]>(
+            result,
+            res => {
+                app.emit('res-data', { errors: [], result: res.map(v => v.toJSON()) });
+            },
+            err => {
+                app.emit('res-err', {errors: [ err.toJSON() ]});
+            },
+        );
 
-                        return json;
-                    });
+        changeStream.on('change', async doc => {
+            logger.info(doc);
 
-                    app.emit('res-data', {
-                        'errors': [],
-                        'result': schoolArr,
-                    });
-                });
-        } catch (error) {
-            app.emit(
-                'res-data',
-                {
-                    'errors': new AppError({
-                        code: 'GetSchoolsError',
-                        message: 'Unpredictable error.' 
-                    }).toJSON(),
-                }
-            );
-        } 
+            const arr = await SchoolSchema.find({});
+            
+            const schoolArr = arr.map(v => { 
+                const newV = v.toObject();
+
+                const school = School.fromJSON(newV);
+
+                const json = school.toJSON();
+
+                return json;
+            });
+
+            app.emit('res-data', {
+                'errors': [],
+                'result': schoolArr,
+            });
+        });
+
+        app.on('disconnect', () => {
+            logger.info('Disconnected!');
+
+            changeStream.close();
+        });
     }
     
     async save(school: School): Promise<void | AppError> {

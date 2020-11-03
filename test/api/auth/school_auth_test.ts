@@ -12,7 +12,7 @@ const url = 'localhost:3000';
 
 const tRegisterInfo = {
     'name': 'Liceum 23',
-    'duid': '21938247rfdnjjdc',
+    'directorUid': '21938247rfdnjjdc',
     'location': {
         'latitude': 23,
         'longtitude': 23,
