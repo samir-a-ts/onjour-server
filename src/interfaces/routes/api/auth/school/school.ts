@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import SchoolController from '../../../../controllers/api/auth/school/SchoolController';
+import SchoolAuthController from '../../../../controllers/api/auth/school/SchoolController';
 
 const schoolRouter = Router();
 
-schoolRouter.post('/register', SchoolController.register);
+schoolRouter.post('/register', SchoolAuthController.register);
 
-schoolRouter.post('/confirm', SchoolController.confirm);
+schoolRouter.post('/confirm', SchoolAuthController.confirm);
 
 export default schoolRouter;

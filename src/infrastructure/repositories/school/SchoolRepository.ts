@@ -1,64 +1,125 @@
-import WebSocket from 'ws';
+import { Socket } from 'socket.io';
 import AppError from '../../../application/errors/error';
 import School from '../../../domain/school/School';
 import SchoolRepository from '../../../domain/repositories/SchoolRepository';
 import SchoolSchema from '../../orm/schemas/school/school_schema';
+import constants from '../../config/constants';
+import Fold from '../../../application/fold';
+
+const { logger } = constants;
 
 export default class SchoolRepositoryImpl extends SchoolRepository {
 
-    async getOneStream(schoolUid: string, clients: WebSocket[]): Promise<void> {
-        const schema = await SchoolSchema.findOne({ uid: schoolUid });
+    private async _findOne(uid: string): Promise<School | AppError> {
+        const schema = await SchoolSchema.findOne({ uid: uid });
 
-        if (schema != null) {
-            const res = schema.toObject();
+            if (schema != null || schema != undefined) {
+                const res = schema.toObject();
 
-            const school = School.fromJSON(res);
+                const school = School.fromJSON(res);
 
-            if (school.confirmed) {
-                 schema.on('change', data => {
-                    clients.forEach(
-                        client => 
-                        client.send(data),
-                    );
+                if (school.confirmed) {
+                    return school;
+                } else {
+                    return new AppError({ 
+                        code: 'SchoolDidNotConfirmed',
+                        message: 'That school doesnt confirmed by admininstration yet.'
+                    });
+                }
+            }
+            else {
+                return new AppError({
+                    code: 'SchoolDoesntExist',
+                    message: 'This school doesn\'t exist.'
                 });
-            } else {
-                clients.forEach(client => client.send(
+            }
+    }
+
+    async streamOne(schoolUid: string, app: Socket): Promise<void> {
+
+        logger.info('data');
+
+        const changeStream = SchoolSchema.watch();
+
+        const result = await this._findOne(schoolUid);
+
+        Fold.execute<School>(result, res => {
+            app.emit('res-data', {errors: [], result: res.toJSON()});
+        }, err => {
+            app.emit('res-data', {errors: [err.toJSON()]});
+        });
+
+        changeStream.on('change', async doc => {
+            logger.info(doc);
+
+            const schema = await SchoolSchema.findOne({ uid: schoolUid });
+
+            if (schema != null || schema != undefined) {
+                const res = schema.toObject();
+
+                const school = School.fromJSON(res);
+
+                if (school.confirmed) {
+                    app.emit('res-data', school.toJSON());
+                } else {
+                    app.emit(
+                        'res-data',
                         new AppError({ 
                             code: 'SchoolDidNotConfirmed',
                             message: 'That school doesnt confirmed by admininstration yet.'
-                        })
-                    )
+                        }).toJSON()
+                    );
+                }
+            }
+            else {
+                app.emit(
+                    'res-data',
+                    {
+                        errors: [
+                            new AppError({
+                                code: 'SchoolDoesntExist',
+                                message: 'This school doesn\'t exist.'
+                            }).toJSON(),
+                        ],
+                    }
                 );
             }
-        }
-        else {
-            clients.forEach(client => client.send(
-                    new AppError({ code: 'SchoolDoesntExist', message: 'This school doesn\'t exist.' }).toJSON(),
-                )
-            );
-        }
+        });
     }
 
-    async getAllStream(clients: WebSocket[]): Promise<void> {
+    async streamAll(app: Socket): Promise<void> {
         try {
             SchoolSchema
-            .watch([ {} ])
-            .on('change', doc => {
-                clients.forEach(
-                    client => 
-                    client.send(doc)
-                );
-            });
+                .find({})
+                .then(arr => {
+                    const schoolArr = arr.map(v => { 
+                        const newV = v.toObject();
+
+                        const school = School.fromJSON(newV);
+
+                        const json = school.toJSON();
+
+                        return json;
+                    });
+
+                    app.emit('res-data', {
+                        'errors': [],
+                        'result': schoolArr,
+                    });
+                });
         } catch (error) {
-            clients.forEach( client => client.send(
-                    new AppError({
+            app.emit(
+                'res-data',
+                {
+                    'errors': new AppError({
                         code: 'GetSchoolsError',
                         message: 'Unpredictable error.' 
-                    }),
-                )
+                    }).toJSON(),
+                }
             );
         } 
     }
+    
     async save(school: School): Promise<void | AppError> {
         const schema = school.toSchema();
 

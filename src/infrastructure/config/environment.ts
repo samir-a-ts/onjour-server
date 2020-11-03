@@ -28,6 +28,7 @@ const environment = {
     databaseConfig: {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      replicaSet: 'rs',
     },
   },
   session: {

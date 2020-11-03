@@ -133,10 +133,4 @@ describe('School confirmation. (/school)', () => {
         });
     });
 
-    after(done => {
-        collection
-            .deleteOne({ name: tRegisterInfo.name })
-            .then(() => done());
-    });
-
 }); 

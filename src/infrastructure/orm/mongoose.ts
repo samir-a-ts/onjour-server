@@ -1,6 +1,6 @@
-import constants from '../config/constants';
-
 import mongoose, { Connection, Mongoose } from 'mongoose';
+
+import constants from '../config/constants';
 
 import env from '../config/environment';
 

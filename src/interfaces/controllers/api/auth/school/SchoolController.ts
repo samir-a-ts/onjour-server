@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import serviceLocator from '../../../../../infrastructure/config/service_locator';
 import Fold from '../../../../../application/fold';
 
-export default class SchoolController {
+export default class SchoolAuthController {
 
     static async register(req: Request, res: Response): Promise<void> {
         /// TODO: [SECURITY] Parsing data
