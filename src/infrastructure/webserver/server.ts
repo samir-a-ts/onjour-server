@@ -11,7 +11,7 @@ import http from 'http';
 
 const { logger } = constants;
 
-export const app = express();
+const app = express();
 
 const server = http.createServer(app);
 
@@ -24,7 +24,7 @@ async function startServer() : Promise<void> {
  
   const apiLimiter = rateLimit({
     max: 100,
-    windowMs: 15 * 60 * 1000,
+    windowMs: 15 * 60 * 1000, // 15 minutes
   });
 
   /// Set up middleware
@@ -33,6 +33,8 @@ async function startServer() : Promise<void> {
   app.use(text());
   app.use(urlencoded({extended: true}));
   app.use(helmet());
+
+  app.use('/public/', express.static('public'));
 
   app.use('/api', apiLimiter);
   app.use('/api', apiRouter);

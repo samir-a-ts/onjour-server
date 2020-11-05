@@ -8,6 +8,6 @@ const directorObj = Object.assign(
 
 const directorSchema = new mongoose.Schema(directorObj);
 
-const DirectorSchema = mongoose.model('Director', directorSchema, 'directors');
+const DirectorSchema = mongoose.model('Director', directorSchema, 'users');
 
 export default DirectorSchema;

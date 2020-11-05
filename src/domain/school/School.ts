@@ -13,8 +13,6 @@ export type SchoolParams = {
     teacherUids: string[],
     parentUids: string[],
     studentUids: string[],
-    classes: [], // TODO!: IMPLEMENT
-    chats: [], // TODO: IMPLEMENT TOO
 };
 
 class School {
@@ -23,22 +21,18 @@ class School {
     directorUid: string;
     confirmed: boolean;
     assistantsUids: string[];
-    chats: [];
-    classes: [];
     parentUids: string[];
     studentUids: string[];
     teacherUids: string[];
     name: string;
 
 
-    constructor({ uid, location, directorUid, confirmed, assistantUids, chats, classes, parentUids, studentUids, teacherUids, name }: SchoolParams) {
+    constructor({ uid, location, directorUid, confirmed, assistantUids, parentUids, studentUids, teacherUids, name }: SchoolParams) {
         this.uid = uid ?? generateUid();
         this.location = location;
         this.directorUid = directorUid;
         this.confirmed = confirmed ?? false;
         this.assistantsUids = assistantUids ?? [];
-        this.chats = chats ?? [];
-        this.classes = classes ?? [];
         this.parentUids = parentUids ?? [];
         this.studentUids = studentUids ?? [];
         this.teacherUids = teacherUids ?? [];
@@ -59,8 +53,6 @@ class School {
             studentUids: json.studentUids as string[],
             assistantUids: json.assistantUids as string[],
             uid: json.uid as string,
-            chats: json.chats as [],
-            classes: json.classes as [],
             confirmed: json.confirmed as boolean,
         });
     }
@@ -76,8 +68,6 @@ class School {
             teacherUids: this.teacherUids,
             parentUids: this.parentUids,
             studentUids: this.studentUids,
-            // chats: this.chats.map(v => v.toJSON()),
-            // classes: this.classes.map(v => v.toJSON()),
         };
     }
 }

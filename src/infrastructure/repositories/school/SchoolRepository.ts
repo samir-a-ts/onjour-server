@@ -51,9 +51,9 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
 
     async streamOne(schoolUid: string, app: Socket): Promise<void> {
 
-        logger.info('data');
-
-        const changeStream = SchoolSchema.watch();
+        const changeStream = SchoolSchema.watch([ 
+            { $match: { uid: schoolUid } },
+         ]);
 
         const result = await this._findOne(schoolUid);
 
@@ -94,22 +94,18 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
         changeStream.on('change', async doc => {
             logger.info(doc);
 
-            const arr = await SchoolSchema.find({});
-            
-            const schoolArr = arr.map(v => { 
-                const newV = v.toObject();
+            const arr = await this._findAll();
 
-                const school = School.fromJSON(newV);
-
-                const json = school.toJSON();
-
-                return json;
-            });
-
-            app.emit('res-data', {
-                'errors': [],
-                'result': schoolArr,
-            });
+            Fold.execute<School[]>(
+                arr,
+                schools => app.emit('res-data', {
+                    'errors': [],
+                    'result': schools.map(s => s.toJSON()),
+                }),
+                err => app.emit('res-err', {
+                    'errors': [ err.toJSON(), ],
+                }),
+            );
         });
 
         app.on('disconnect', () => {

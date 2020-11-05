@@ -32,12 +32,12 @@ abstract class User {
     this.password = password;
     this.uid = uid ?? generateUid();
     this.title = title;
-    this.schoolUid = schoolUid;
+    this.schoolUid = schoolUid ?? null;
   }
 
-  abstract toSchema(): Document;
-
   abstract toJSON(): Record<string, unknown>;
+
+  abstract toSchema(): Document;
 }
 
 
