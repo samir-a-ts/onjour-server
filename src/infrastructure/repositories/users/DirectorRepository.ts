@@ -54,9 +54,11 @@ class DirectorRepositoryImpl extends UserRepository<Director> {
     const result = await DirectorSchema.findOne({ uid });
 
     if (result !== null) {
-      const user = Director.fromJSON(result.toJSON());
+      let user = Director.fromJSON(result.toJSON());
 
-      user.copyWith(newData);
+      user = user.copyWith(newData);
+
+      console.log(user.toJSON());
 
       await result.updateOne(user.toJSON()); 
     }

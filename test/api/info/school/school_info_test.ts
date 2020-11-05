@@ -5,8 +5,6 @@ import { describe, it } from 'mocha';
 import io from 'socket.io-client';
 import SchoolSchema from '../../../../src/infrastructure/orm/schemas/school/school_schema';
 import constants from '../../../../src/infrastructure/config/constants';
-// import env from '../../../../src/infrastructure/config/environment';
-// import mongoose from 'mongoose';
 
 const { logger } = constants;
 
@@ -125,11 +123,7 @@ describe('Getting school information (/info/school)', () => {
 
     after(done => {
         SchoolSchema
-            .findOne({ uid: school.uid })
-            .then(v => {
-                v
-                    ?.deleteOne()
-                    .then(() => done());
-            });
+            .findOneAndDelete({ uid: school.uid })
+            .then(() => done());
     });
 }); 

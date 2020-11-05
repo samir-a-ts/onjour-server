@@ -88,10 +88,4 @@ describe('User authentication (/api/auth/user)', () => {
             });
         });
     });
-
-    after(done => {
-        DirectorSchema
-        .findOneAndDelete({email: tDirectorInfo.email})
-        .then(() => done());
-    });
 });
