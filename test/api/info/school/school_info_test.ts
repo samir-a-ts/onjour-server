@@ -5,6 +5,7 @@ import { describe, it } from 'mocha';
 import io from 'socket.io-client';
 import SchoolSchema from '../../../../src/infrastructure/orm/schemas/school/school_schema';
 import constants from '../../../../src/infrastructure/config/constants';
+import coder from '../../../../src/infrastructure/webserver/security/main';
 
 const { logger } = constants;
 
@@ -39,13 +40,23 @@ describe('Getting school information (/info/school)', () => {
             const socket = io.connect('http://localhost:3000/api/info/school/get');
 
             socket.on('connect', () => {
-                socket.emit('req-data', { uid: school.uid });
+                const request = { uid: school.uid };
 
-                socket.on('res-data', (data: { errors: [], result: Record<string, unknown> }) => {
-                    expect(data).to.have.ownProperty('errors');
-                    expect(data['errors'].length).to.be.eq(0);
-                    expect(data).to.have.ownProperty('result');
-                    expect(data['result']['uid']).to.be.eq(school.uid);
+                const reqStr = JSON.stringify(request);
+
+                const encrypted = coder.encrypt(reqStr, 'base64');
+
+                socket.emit('req-data', { token: encrypted });
+
+                socket.on('res-data', (data: { response: string }) => {
+                    const objStr = coder.decrypt(data.response, 'utf8');
+
+                    const obj = JSON.parse(objStr);  
+
+                    expect(obj).to.have.ownProperty('errors');
+                    expect(obj['errors'].length).to.be.eq(0);
+                    expect(obj).to.have.ownProperty('result');
+                    expect(obj['result']['uid']).to.be.eq(school.uid);
 
                     socket.disconnect();
 

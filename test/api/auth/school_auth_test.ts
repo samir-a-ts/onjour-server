@@ -5,6 +5,7 @@ import chaiHttp from 'chai-http';
 import { describe, it } from 'mocha';
 import mongoose  from 'mongoose';
 import environment from '../../../src/infrastructure/config/environment';
+import coder from '../../../src/infrastructure/webserver/security/main';
 
 chai.use(chaiHttp);
 
@@ -36,11 +37,15 @@ describe('School authentication. (/auth/school)', () => {
             });
         });
 
+        const regStr = JSON.stringify(tRegisterInfo);
+
+        const encrypteReg = coder.encrypt(regStr, 'base64');
+
         it('It should succeed', done => {
             chai
             .request(url)
             .post('/api/auth/school/register')
-            .send(tRegisterInfo)
+            .send({ token: encrypteReg })
             .end((_, res) => {
                 expect(res.status).equal(200);
 
@@ -103,9 +108,15 @@ describe('School confirmation. (/school)', () => {
             });
         });
 
+        const tConfirmInfo = { uid: schoolUid };
+
+        const confStr = JSON.stringify(tConfirmInfo);
+
+        const encrypted = coder.encrypt(confStr, 'base64');
+
         it('It should set `confirm` property to true', done => {
             collection
-                .findOne({ uid: schoolUid })
+                .findOne({ token: encrypted })
                 .then(function(result) {
                     if (result !== null) {
                         const r = result.toObject();
@@ -123,7 +134,7 @@ describe('School confirmation. (/school)', () => {
             chai
                 .request(url)
                 .post('/api/auth/school/confirm')
-                .send({ uid: schoolUid })
+                .send({token: encrypted})
                 .end((_, res) => {
                     expect(res.body).have.own.property('errors');
                     expect(res.body['errors'].length).to.be.not.equal(0);

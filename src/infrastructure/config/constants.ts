@@ -15,16 +15,18 @@ type Constants = {
 
 const config = dotEnv.config();
 
+const parsed = config.parsed;
+
 export default {
   databases: {
-    mongodbUri: config.parsed?.DB_URI
+    mongodbUri: parsed?.DB_URI
   },
   security: {
-    jwtSecret: config.parsed?.JWT_SECRET,
+    jwtSecret: parsed?.JWT_SECRET,
   },
   emailAuth: {
-    user: config.parsed?.EMAIL_USER,
-    pass: config.parsed?.EMAIL_PASS
+    user: parsed?.EMAIL_USER,
+    pass: parsed?.EMAIL_PASS
   },
   logger: pino({ prettyPrint: true, }),
 } as Constants;

@@ -21,7 +21,7 @@ async function startServer() : Promise<void> {
   server.listen(environment.port, () => {
     logger.info('Succesfully connected to localhost:' + environment.port);
   });
- 
+
   const apiLimiter = rateLimit({
     max: 100,
     windowMs: 15 * 60 * 1000, // 15 minutes

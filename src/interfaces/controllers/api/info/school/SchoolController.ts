@@ -1,10 +1,13 @@
 import { Socket } from 'socket.io';
+import decryptRequest from 'src/application/server/request_decrypter';
 import serviceLocator from '../../../../../infrastructure/config/service_locator';
 
 export default class SchoolInfoController {
 
-    static async streamOne(socket: Socket, body: unknown): Promise<void> {
-        const { uid } = body as { uid: string };
+    static async streamOne(socket: Socket, body: { token: string }): Promise<void> {
+        const decrBody = decryptRequest(body);
+
+        const { uid } = decrBody as { uid: string };
 
         await serviceLocator.schoolRepository.streamOne(uid, socket);
     }

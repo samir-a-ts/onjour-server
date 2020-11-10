@@ -5,6 +5,7 @@ import SchoolRepository from '../../../domain/repositories/SchoolRepository';
 import SchoolSchema from '../../orm/schemas/school/school_schema';
 import constants from '../../config/constants';
 import Fold from '../../../application/fold';
+import { webSocketResponse } from '../../../application/server/response_encypter';
 
 const { logger } = constants;
 
@@ -58,9 +59,9 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
         const result = await this._findOne(schoolUid);
 
         Fold.execute<School>(result, res => {
-            app.emit('res-data', {errors: [], result: res.toJSON()});
+            webSocketResponse({errors: [], result: res.toJSON()}, 'res-data', app);
         }, err => {
-            app.emit('res-err', {errors: [err.toJSON()]});
+            webSocketResponse({errors: [err.toJSON()]}, 'res-err', app);
         });
 
         changeStream.on('change', async doc => {
@@ -68,11 +69,11 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
 
             const res = await this._findOne(schoolUid);
 
-            Fold.execute<School>(res, r => {
-                app.emit('res-data', {errors: [], result: r.toJSON()});
+            Fold.execute<School>(res, res => {
+                webSocketResponse({errors: [], result: res.toJSON()}, 'res-data', app);
             }, err => {
-                app.emit('res-err', {errors: [err.toJSON()]});
-            });   
+                webSocketResponse({errors: [err.toJSON()]}, 'res-err', app);
+            });
         });
     }
 
@@ -84,10 +85,10 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
         Fold.execute<School[]>(
             result,
             res => {
-                app.emit('res-data', { errors: [], result: res.map(v => v.toJSON()) });
+                webSocketResponse({ errors: [], result: res.map(v => v.toJSON()) }, 'res-data', app);
             },
             err => {
-                app.emit('res-err', {errors: [ err.toJSON() ]});
+                webSocketResponse({ errors: [ err.toJSON() ] }, 'res-err', app);
             },
         );
 
@@ -98,13 +99,12 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
 
             Fold.execute<School[]>(
                 arr,
-                schools => app.emit('res-data', {
-                    'errors': [],
-                    'result': schools.map(s => s.toJSON()),
-                }),
-                err => app.emit('res-err', {
-                    'errors': [ err.toJSON(), ],
-                }),
+                res => {
+                    webSocketResponse({ errors: [], result: res.map(v => v.toJSON()) }, 'res-data', app);
+                },
+                err => {
+                    webSocketResponse({ errors: [ err.toJSON() ] }, 'res-err', app);
+                },
             );
         });
 
