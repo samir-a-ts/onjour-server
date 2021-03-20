@@ -1,0 +1,1 @@
+"C:\Program Files\MongoDB\Server\4.4\bin\mongod" --dbpath "D:\Download\MongoDB\Server\4.4\data" --replSet "rs"

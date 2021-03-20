@@ -14,11 +14,16 @@ export default class SchoolAuthController {
 
         const result = await serviceLocator.schoolRepository.save(school);
 
-        Fold.execute<void>(result, 
-            () => {
-                res.sendStatus(200);
+        Fold.execute<string>(result, 
+            respo => {
+                const resp = {
+                    errors: [],
+                    result: respo,
+                };
+
+                response(resp, res);
             }, 
-            (err) => {
+            err => {
                 const resp = {
                     errors: [
                         err.toJSON(),
@@ -40,7 +45,11 @@ export default class SchoolAuthController {
         Fold.execute<void>(
             result,
             () => {
-                res.sendStatus(200);
+                const resp = {
+                    errors: [],
+                };
+
+                response(resp, res);
             },
             (err) => {
                 const resp = {

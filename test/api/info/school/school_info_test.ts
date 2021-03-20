@@ -5,7 +5,8 @@ import { describe, it } from 'mocha';
 import io from 'socket.io-client';
 import SchoolSchema from '../../../../src/infrastructure/orm/schemas/school/school_schema';
 import constants from '../../../../src/infrastructure/config/constants';
-import coder from '../../../../src/infrastructure/webserver/security/main';
+import decryptResponse from '../../../server/response_decrypter';
+import encryptRequest from '../../../server/request_encrypter';
 
 const { logger } = constants;
 
@@ -42,21 +43,17 @@ describe('Getting school information (/info/school)', () => {
             socket.on('connect', () => {
                 const request = { uid: school.uid };
 
-                const reqStr = JSON.stringify(request);
-
-                const encrypted = coder.encrypt(reqStr, 'base64');
+                const encrypted = encryptRequest(request);
 
                 socket.emit('req-data', { token: encrypted });
 
                 socket.on('res-data', (data: { response: string }) => {
-                    const objStr = coder.decrypt(data.response, 'utf8');
-
-                    const obj = JSON.parse(objStr);  
-
-                    expect(obj).to.have.ownProperty('errors');
-                    expect(obj['errors'].length).to.be.eq(0);
-                    expect(obj).to.have.ownProperty('result');
-                    expect(obj['result']['uid']).to.be.eq(school.uid);
+                    const decrypted = decryptResponse(data);
+                    
+                    expect(decrypted).to.have.ownProperty('errors');
+                    expect(decrypted['errors'].length).to.be.eq(0);
+                    expect(decrypted).to.have.ownProperty('result');
+                    expect(decrypted['result']['uid']).to.be.eq(school.uid);
 
                     socket.disconnect();
 
@@ -70,19 +67,25 @@ describe('Getting school information (/info/school)', () => {
             const socket = io.connect('http://localhost:3000/api/info/school/get');
 
             socket.on('connect', () => {
-                socket.on('res-err', (data: Record<string, []>) => {
-                    expect(data).to.be.not.null;
-                    expect(data).has.own.property('errors');
+                socket.on('res-err', (data: { response: string }) => {
+                    const decrypted = decryptResponse(data);
 
-                    expect(data.errors).to.be.instanceof(Array);
-                    expect(data.errors.length).to.be.eq(1);
+                    expect(decrypted).to.be.not.null;
+                    expect(decrypted).has.own.property('errors');
+
+                    expect(decrypted.errors).to.be.instanceof(Array);
+                    expect(decrypted.errors.length).to.be.eq(1);
 
                     socket.disconnect();
 
                     done();
                 });
 
-                socket.emit('req-data', JSON.stringify({uid: 'random string'}));
+                const request = { uid: 'random string' };
+
+                const encrypted = encryptRequest(request);
+
+                socket.emit('req-data', { token: encrypted });
             });    
         });
     });
@@ -117,12 +120,14 @@ describe('Getting school information (/info/school)', () => {
             socket.on('connect', () => {
                 socket.emit('req-data');
 
-                socket.on('res-data', (data: { errors: [], result: Record<string, unknown>[] }) => {
-                    expect(data).to.have.ownProperty('errors');
-                    expect(data['errors'].length).to.be.eq(0);
-                    expect(data).to.have.ownProperty('result');
-                    expect(data['result'].length).to.be.eq(1);
-                    expect(data['result'][0]['uid']).to.be.eq(schools[0].uid);
+                socket.on('res-data', (data: { response: string }) => {
+                    const decrypted = decryptResponse(data);
+
+                    expect(decrypted).to.have.ownProperty('errors');
+                    expect(decrypted['errors'].length).to.be.eq(0);
+                    expect(decrypted).to.have.ownProperty('result');
+                    expect(decrypted['result'].length).to.be.eq(1);
+                    expect(decrypted['result'][0]['uid']).to.be.eq(schools[0].uid);
 
                     socket.disconnect();
 
@@ -132,9 +137,4 @@ describe('Getting school information (/info/school)', () => {
         });
     });
 
-    after(done => {
-        SchoolSchema
-            .findOneAndDelete({ uid: school.uid })
-            .then(() => done());
-    });
 }); 

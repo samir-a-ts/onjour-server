@@ -10,14 +10,4 @@ const coder = new NodeRSA(
     'pkcs1',
 );
 
-// const obj = {thisiS: 'TEST'};
-
-// const objStr = JSON.stringify(obj);
-
-// const encrypted = coder.encrypt(objStr, 'base64');
-
-// const decrypted = coder.decrypt(encrypted, 'utf8');
-
-// console.log(decrypted);
-
 export default coder;

@@ -2,30 +2,40 @@ import { Request, Response } from 'express';
 import { Socket } from 'socket.io';
 import Fold from '../../../../../application/fold';
 import serviceLocator from '../../../../../infrastructure/config/service_locator';
+import { response } from '../../../../../application/server/response_encypter';
+import decryptRequest from '../../../../../application/server/request_decrypter';
 
 export default class DirectorInfoController {
     static async update(req: Request, res: Response): Promise<void> {
-        const { uid } = req.body as { uid: string };
+        const body = decryptRequest(req.body);
 
-        const result = await serviceLocator.directorRepository.updateOne(uid, req.body);
+        const { uid } = body as { uid: string };
+
+        const result = await serviceLocator.directorRepository.updateOne(uid, body);
         
         Fold.execute(
             result,
             () => {
-                res.json({
+                const resp = {
                     errors: [],
-                });
+                };
+
+                response(resp, res);
             },
             err => {
-                res.json({
+                const resp = {
                     errors: [ err.toJSON() ],
-                });
+                };
+
+                response(resp, res);
             },
         );
     }
 
-    static async get(socket: Socket, body: unknown): Promise<void> {
-        const { uid } = body as { uid: string };
+    static async get(socket: Socket, body: { token: string }): Promise<void> {
+        const decrBody = decryptRequest(body);
+
+        const { uid } = decrBody as { uid: string };
 
         await serviceLocator.directorRepository.getOne(uid, socket);
     }

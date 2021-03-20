@@ -1,7 +1,8 @@
-import coder from '../../../src/infrastructure/webserver/security/main';
 import chai, { expect } from 'chai';
 import chaiHttp from 'chai-http';
 import { describe, it } from 'mocha';
+import decryptResponse from '../../server/response_decrypter';
+import encryptRequest from '../../server/request_encrypter';
 
 chai.use(chaiHttp);
 
@@ -11,11 +12,9 @@ describe('Email confirmation (/email-confirm)', () => {
         'email': 'lutrak111@gmail.com',
     };
 
-    const reqStr = JSON.stringify(tEmailConfirm);
+    const encrypteReg = encryptRequest(tEmailConfirm);
 
-    const encrypted = coder.encrypt(reqStr, 'base64');
-
-    const obj = { 'token': encrypted };
+    const obj = { 'token': encrypteReg };
 
     describe('POST /', () => {
         it('It should succeed, and return code without any errors', done => {
@@ -24,9 +23,7 @@ describe('Email confirmation (/email-confirm)', () => {
             .post('/api/email-confirm')
             .send(obj)
             .end((_, res) => {
-                const decrypted = coder.decrypt(res.body.response, 'utf8');
-
-                const response = JSON.parse(decrypted);
+                const response = decryptResponse(res.body);
 
                 expect(res.status).equal(200);
 

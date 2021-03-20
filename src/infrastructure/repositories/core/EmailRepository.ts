@@ -3,9 +3,11 @@ import nodeMailer from 'nodemailer';
 import AppError from '../../../application/errors/error';
 import constants from '../../config/constants';
 
+const {emailAuth, logger} = constants;
+
 const transport = nodeMailer.createTransport({
     service: 'gmail',
-    auth: constants.emailAuth,
+    auth: emailAuth,
 });
 
 class EmailRepositoryImpl extends EmailRepository {
@@ -36,6 +38,9 @@ class EmailRepositoryImpl extends EmailRepository {
 
             return code;
         } catch (e) {
+
+            logger.error(e);
+
             return new AppError({
                 code: 'EmailConfirmationError',
                 message: 'Something went wrong! Maybe, this email does not exist.'

@@ -3,7 +3,7 @@ import School from '../school/School';
 import { Socket } from 'socket.io';
 
 abstract class SchoolRepository {
-    abstract save(school: School): Promise<void | AppError>;
+    abstract save(school: School): Promise<string | AppError>;
 
     abstract confirm(schoolUid: string): Promise<void | AppError>;
 

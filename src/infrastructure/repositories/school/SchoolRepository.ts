@@ -14,26 +14,26 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
     private async _findOne(uid: string): Promise<School | AppError> {
         const schema = await SchoolSchema.findOne({ uid: uid });
 
-            if (schema != null || schema != undefined) {
-                const res = schema.toObject();
+        if (schema != null || schema != undefined) {
+            const res = schema.toObject();
 
-                const school = School.fromJSON(res);
+            const school = School.fromJSON(res);
 
-                if (school.confirmed) {
-                    return school;
-                } else {
-                    return new AppError({ 
-                        code: 'SchoolDidNotConfirmed',
-                        message: 'That school doesnt confirmed by admininstration yet.'
-                    });
-                }
-            }
-            else {
+            if (school.confirmed) {
+                return school;
+            } else {
                 return new AppError({
-                    code: 'SchoolDoesntExist',
-                    message: 'This school doesn\'t exist.'
+                    code: 'SchoolDidNotConfirmed',
+                    message: 'That school doesnt confirmed by admininstration yet.'
                 });
             }
+        }
+        else {
+            return new AppError({
+                code: 'SchoolDoesntExist',
+                message: 'This school doesn\'t exist.'
+            });
+        }
     }
 
     private async _findAll(): Promise<School[] | AppError> {
@@ -52,33 +52,35 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
 
     async streamOne(schoolUid: string, app: Socket): Promise<void> {
 
-        const changeStream = SchoolSchema.watch([ 
-            { $match: { uid: schoolUid } },
-         ]);
+        const sendResult = (result: AppError | School) => {
+            Fold.execute<School>(result, res => {
+                webSocketResponse({ errors: [], result: res.toJSON()}, 'res-data', app);
+            }, err => {
+                webSocketResponse({ errors: [err.toJSON()] }, 'res-err', app);
+            });
+        };
+
+        const changeStream = SchoolSchema.watch([
+            { $match: { uid: schoolUid, confirmed: true } },
+        ]);
 
         const result = await this._findOne(schoolUid);
 
-        Fold.execute<School>(result, res => {
-            webSocketResponse({errors: [], result: res.toJSON()}, 'res-data', app);
-        }, err => {
-            webSocketResponse({errors: [err.toJSON()]}, 'res-err', app);
-        });
+        sendResult(result);
 
         changeStream.on('change', async doc => {
             logger.info(doc);
 
             const res = await this._findOne(schoolUid);
 
-            Fold.execute<School>(res, res => {
-                webSocketResponse({errors: [], result: res.toJSON()}, 'res-data', app);
-            }, err => {
-                webSocketResponse({errors: [err.toJSON()]}, 'res-err', app);
-            });
+            sendResult(res);
         });
     }
 
     async streamAll(app: Socket): Promise<void> {
-        const changeStream = SchoolSchema.watch();
+        const changeStream = SchoolSchema.watch([
+            { $match: { confirmed: true } },
+        ]);
 
         const result = await this._findAll();
 
@@ -88,7 +90,7 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
                 webSocketResponse({ errors: [], result: res.map(v => v.toJSON()) }, 'res-data', app);
             },
             err => {
-                webSocketResponse({ errors: [ err.toJSON() ] }, 'res-err', app);
+                webSocketResponse({ errors: [err.toJSON()] }, 'res-err', app);
             },
         );
 
@@ -103,7 +105,7 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
                     webSocketResponse({ errors: [], result: res.map(v => v.toJSON()) }, 'res-data', app);
                 },
                 err => {
-                    webSocketResponse({ errors: [ err.toJSON() ] }, 'res-err', app);
+                    webSocketResponse({ errors: [err.toJSON()] }, 'res-err', app);
                 },
             );
         });
@@ -114,14 +116,16 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
             changeStream.close();
         });
     }
-    
-    async save(school: School): Promise<void | AppError> {
+
+    async save(school: School): Promise<string | AppError> {
         const schema = school.toSchema();
 
-        const result = await SchoolSchema.findOne({ name: school.name });
+        const result = await SchoolSchema.findOne({ location: school.location.toJSON() });
 
         if (result === null) {
             await schema.save();
+
+            return schema?.toObject().uid;
         } else {
             return new AppError({
                 code: 'SchoolAlreadyExist',
@@ -131,7 +135,14 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
     }
 
     async confirm(schoolUid: string): Promise<void | AppError> {
+        logger.info(`Confirming... ${schoolUid}`);
+
+        if (schoolUid === null)
+            return new AppError({ code: 'NoUIDProvided', message: 'You forgot to send me school uid!' });
+
         const result = await SchoolSchema.findOne({ uid: schoolUid });
+
+        logger.info(result?.toObject());
 
         if (result !== null) {
             const newResult = result.toObject();
@@ -144,7 +155,7 @@ export default class SchoolRepositoryImpl extends SchoolRepository {
             await result.updateOne(newResult);
         }
         else {
-            return new AppError({code: 'SchoolDoesntExist', message: 'That school doesnt exist. Please register school first.'});
+            return new AppError({ code: 'SchoolDoesntExist', message: 'That school doesnt exist. Please register school first.' });
         }
     }
 

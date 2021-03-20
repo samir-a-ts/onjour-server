@@ -10,8 +10,6 @@ const schoolObj = {
     directorUid: String,
     confirmed: Boolean,
     assistantsUids: Array,
-    chats: Array,
-    classes: Array,
     parentUids: Array,
     studentUids: Array,
     teacherUids: Array,

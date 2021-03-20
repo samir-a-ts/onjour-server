@@ -2,10 +2,11 @@ import SchoolSchema from '../../../src/infrastructure/orm/schemas/school/school_
 
 import chai, { expect } from 'chai';
 import chaiHttp from 'chai-http';
-import { describe, it } from 'mocha';
+import { before, describe, it } from 'mocha';
 import mongoose  from 'mongoose';
 import environment from '../../../src/infrastructure/config/environment';
-import coder from '../../../src/infrastructure/webserver/security/main';
+import decryptResponse from '../../server/response_decrypter';
+import encryptRequest from '../../server/request_encrypter';
 
 chai.use(chaiHttp);
 
@@ -21,8 +22,6 @@ const tRegisterInfo = {
     },
 };
 
-let schoolUid: string;
-
 
 describe('School authentication. (/auth/school)', () => {
 
@@ -37,9 +36,7 @@ describe('School authentication. (/auth/school)', () => {
             });
         });
 
-        const regStr = JSON.stringify(tRegisterInfo);
-
-        const encrypteReg = coder.encrypt(regStr, 'base64');
+        const encrypteReg = encryptRequest(tRegisterInfo);
 
         it('It should succeed', done => {
             chai
@@ -47,23 +44,16 @@ describe('School authentication. (/auth/school)', () => {
             .post('/api/auth/school/register')
             .send({ token: encrypteReg })
             .end((_, res) => {
+                const decrypted = decryptResponse(res.body);
+
                 expect(res.status).equal(200);
 
+                expect(decrypted).to.have.own.property('errors');
+                expect(decrypted.errors.length).to.be.equal(0);
+
+                expect(decrypted.result).to.be.not.null;
+
                 done();
-            });
-        });
-
-        it('It should add school to DB', done => {
-            collection
-                .findOne({name: tRegisterInfo.name})
-                .then(function(result) {
-                    const resultObj = result?.toObject();
-
-                    expect(resultObj).not.equal(null);
-                    expect(resultObj).has.own.property('confirmed');
-                    expect(resultObj).property('confirmed').is.equal(false);
-
-                    done();
             });
         });
 
@@ -71,77 +61,67 @@ describe('School authentication. (/auth/school)', () => {
             chai
                 .request(url)
                 .post('/api/auth/school/register')
-                .send(tRegisterInfo)
+                .send({ token: encrypteReg  })
                 .end((_, res) => {
-                    expect(res.body).have.own.property('errors');
+                    const decrypted = decryptResponse(res.body);
+
+                    expect(decrypted).have.own.property('errors');
+                    expect(decrypted.errors.length).to.be.eq(1);
 
                     done();
                 });
         });
     });
 
-}); 
+describe('POST /confirm', () => {
 
-describe('School confirmation. (/school)', () => {
+it('It should succeed', done => {
 
-    const collection = SchoolSchema;
+    collection
+            .findOne({})
+            .then(res => {
+                const obj = res?.toObject();
 
-    before(done => {
-        SchoolSchema.findOne({ name: tRegisterInfo.name })
-        .then(res => {
-            schoolUid = res?.toObject().uid;
+                const encrypted = encryptRequest({ uid: obj?.uid });
 
-            done();
-        });
-    });
-
-    describe('POST /confirm', () => {
-        it('It should succeed', done => {
-            chai
-            .request(url)
-            .post('/api/auth/school/confirm')
-            .send({ uid: schoolUid })
-            .end((_, res) => {
-                expect(res.status).equal(200);
-
-                done();
-            });
-        });
-
-        const tConfirmInfo = { uid: schoolUid };
-
-        const confStr = JSON.stringify(tConfirmInfo);
-
-        const encrypted = coder.encrypt(confStr, 'base64');
-
-        it('It should set `confirm` property to true', done => {
-            collection
-                .findOne({ token: encrypted })
-                .then(function(result) {
-                    if (result !== null) {
-                        const r = result.toObject();
-
-                        expect(r).not.equal(null);
-                        expect(r).has.own.property('confirmed');
-                        expect(r).property('confirmed').is.equal(true);
-
-                        done();
-                    }
-            });
-        });
-
-        it('It should return error if school is already confirmed', done => {
-            chai
+                chai
                 .request(url)
                 .post('/api/auth/school/confirm')
-                .send({token: encrypted})
+                .send({ token: encrypted })
                 .end((_, res) => {
-                    expect(res.body).have.own.property('errors');
-                    expect(res.body['errors'].length).to.be.not.equal(0);
+                    expect(res.status).equal(200);
+
+                    const decrypted = decryptResponse(res.body);
+            
+                    expect(decrypted).to.be.eql({ errors: [] });
+            
+                    done();
+                });
+            });
+});
+
+    it('It should return error if school is already confirmed', done => {
+            collection
+            .findOne({})
+            .then(res => {
+                const obj = res?.toObject();
+
+                const encrypted = encryptRequest({ uid: obj?.uid });
+
+                chai
+                .request(url)
+                .post('/api/auth/school/confirm')
+                .send({ token: encrypted })
+                .end((_, res) => {
+                    const decrypted = decryptResponse(res.body);
+
+                    expect(decrypted).have.own.property('errors');
+                    expect(decrypted['errors'].length).to.be.not.equal(0);
 
                     done();
                 });
-        });
+            });
     });
-
-}); 
+});
+});
+    

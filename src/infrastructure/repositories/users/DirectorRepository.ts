@@ -5,6 +5,7 @@ import UserRepository from '../../../domain/repositories/UserRepository';
 import DirectorSchema from '../../orm/schemas/users/director_schema';
 import Fold from '../../../application/fold';
 import constants from '../../config/constants';
+import { webSocketResponse } from '../../../application/server/response_encypter';
 
 const { logger } = constants;
 
@@ -58,8 +59,6 @@ class DirectorRepositoryImpl extends UserRepository<Director> {
 
       user = user.copyWith(newData);
 
-      console.log(user.toJSON());
-
       await result.updateOne(user.toJSON()); 
     }
     else {
@@ -94,15 +93,19 @@ class DirectorRepositoryImpl extends UserRepository<Director> {
      Fold.execute<Director>(
        res,
        director => {
-         app.emit('res-data', {
+        webSocketResponse({
            'errors': [],
            'result': director.toJSON(),
-         });
+         }, 
+         'res-data',
+          app);
        },
        err => {
-         app.emit('res-err', {
-           'errors': [ err.toJSON() ]
-         });
+        webSocketResponse({
+          'errors': [ err.toJSON() ]
+        }, 
+        'res-err',
+         app);
        },
      );
 
@@ -115,15 +118,19 @@ class DirectorRepositoryImpl extends UserRepository<Director> {
       Fold.execute<Director>(
         res,
         director => {
-          app.emit('res-data', {
+          webSocketResponse({
             'errors': [],
             'result': director.toJSON(),
-          });
+          }, 
+          'res-data',
+           app);
         },
         err => {
-          app.emit('res-err', {
+          webSocketResponse({
             'errors': [ err.toJSON() ]
-          });
+          }, 
+          'res-err',
+           app);
         },
       );
 

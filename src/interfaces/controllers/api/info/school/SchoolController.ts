@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import decryptRequest from 'src/application/server/request_decrypter';
+import decryptRequest from '../../../../../application/server/request_decrypter';
 import serviceLocator from '../../../../../infrastructure/config/service_locator';
 
 export default class SchoolInfoController {
